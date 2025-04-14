@@ -2,14 +2,13 @@
 
 Written by Montek Singh
 Copyright and all rights reserved by Montek Singh
-Last Updated:  April 4, 2025
+Last Updated:  Apr 6, 2025
 
 Permission granted to use this only for students, teaching/learning assistants
 and instructors of the COMP 541 course at UNC Chapel Hill.
 For any other use, contact Montek Singh first.
 
 */
-
 
 /*
 
@@ -38,9 +37,7 @@ In the actual board-level implementation, you will define
 scancodes instead of characters, and you can use specify 
 key releases as well.
 */
-#include <stdio.h>
-#include <stdbool.h>
-#include <math.h>
+
 int key_array[] = {'a', 'd', 'w', 's'}; 	// define as many as you need
 
 /* Specify the keys here that get_key2() will look for. */
@@ -74,9 +71,9 @@ typedef struct {
 enum colors {black, red, green, yellow, blue, magenta, cyan, white};
 
 sprite_attr sprite_attributes[Nchars] = {
-	{'0', black, white},
-	{'|', white, white},
-	{' ', black, black},
+	{'.', white, red},
+	{'V', black, green},
+	{'O', black, yellow},
 	{'\\', blue, white}
 };
 
@@ -128,8 +125,8 @@ int get_accelY();
 	// returns Y tilt value (increases right-to-left)
 
 void put_sound(int period);
-	// visually shows approximate sound tone generated
-	// you will not hear a sound, but see the tone highlighted on a sound bar
+	// puts a standard bell sound regardless of period
+	// this is a poor approximation, but at least you will hear a beep
 
 void sound_off();
 	// turns sound off
@@ -144,66 +141,40 @@ void initialize_IO(char* smem_initfile);
 //===============================================================
 // This is the code for your demo app!
 //===============================================================
-void move_ball(int *ball_pos_x, int *ball_pos_y, int *ball_velo_x, int *ball_velo_y, int *boost){
-		putChar_atXY(2, *ball_pos_x, *ball_pos_y);
-                if(*ball_pos_x + *ball_velo_x >=39 || *ball_pos_x + *ball_velo_x < 0){
-                        *ball_velo_x = -*ball_velo_x;
-                }
-                if (*ball_pos_y + *ball_velo_y >= 30 || *ball_pos_y + *ball_velo_y < 0){
-                        *ball_velo_y = -*ball_velo_y;
-                }
-                *ball_pos_x += *ball_velo_x;
-                *ball_pos_y += *ball_velo_y;
-                putChar_atXY(0, *ball_pos_x, *ball_pos_y);
-		my_pause(20/ *boost);
-}
 
-void mvpad_one(int *prev){
-	int raw = get_accel();
-	short accelX = (raw >> 16);
-	 accelX = ceil(((accelX * 60) / 1024));
-	if(*prev!= -1){putChar_atXY(2, 0, *prev);}
-	if(*prev!= -1 || *prev-1 > 0){putChar_atXY(2, 0, *prev-1);}
-	if(*prev!= -1 || *prev+1 < 29){putChar_atXY(2, 0, *prev+1);}
-    	putChar_atXY(1, 0, accelX);
-	if(accelX>0){putChar_atXY(1, 0, accelX-1);}
-	if(accelX<29){putChar_atXY(1, 0, accelX+1);}
 
-	*prev = accelX;
-}
-void mvpad_two(int *prev){
-	int raw = get_accel();
-	short accelY = (short)(raw & 0xFFFF);
-	accelY = ceil(((accelY * 60) / 1024));
-	if(*prev != -1){putChar_atXY(2, 39, *prev);}
-	if(*prev != -1 || *prev-1 > 0){putChar_atXY(2, 39, *prev-1);}
-	if(*prev != -1 || *prev+1 < 29){putChar_atXY(2, 39, *prev+1);}
-   	putChar_atXY(1, 39, accelY);
-	if(accelY > 0){putChar_atXY(1, 39, accelY-1);}
-	if(accelY < 29){putChar_atXY(1, 39, accelY+1);}
-	*prev = accelY;
-	
-}
 int main() {
-	initialize_IO("screen.mem");
-	 
-	int booster = 1;	
-	int ball_x = 10;
-        int ball_y = 10;
-        int velo_x = 1;
-	int velo_y = 1;
-	bool in_play = true;
-	int prev_x = -1;
-	int prev_y = -1;
-        while(in_play){
-                move_ball(&ball_x, &ball_y, &velo_x, &velo_y, &booster);
- 		mvpad_one(&prev_x);
- 		mvpad_two(&prev_y);		
-	
-        }
+	initialize_IO("smem.mem");
+
+	int row1 = 15, row2 = 15;
+	int col1 = 20, col2 = 30;
+	int key1 = 0,  key2 = 0;
+	int key1new, key2new;
+
+	for(int i=0;i<512;i++) {
+		put_sound(950000 - 1600*i);
+		put_leds(i);
+
+		putChar_atXY(1, col1, row1);
+		putChar_atXY(2, col2, row2);
+		pause_and_getkey_2player(10, &key1new, &key2new);
+		if(key1new != 0) key1 = key1new;
+		if(key2new != 0) key2 = key2new;
+
+		switch (key1) {
+		case 1: col1--; if(col1<0) col1=0; break;
+		case 2: col1++; if(col1>39) col1=39; break;
+		case 3: row1--; if(row1<0) row1=0; break;
+		case 4: row1++; if(row1>29) row1=29; break;
+		}
+		switch (key2) {
+		case 1: col2--; if(col2<0) col2=0; break;
+		case 2: col2++; if(col2>39) col2=39; break;
+		case 3: row2--; if(row2<0) row2=0; break;
+		case 4: row2++; if(row2>29) row2=29; break;
+		}
+	}
 }
-
-
 
 
 // The file below has the implementation of all of the helper functions
