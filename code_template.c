@@ -144,21 +144,28 @@ void initialize_IO(char* smem_initfile);
 //===============================================================
 // This is the code for your demo app!
 //===============================================================
-void move_ball(int *ball_pos_x, int *ball_pos_y, int *ball_velo_x, int *ball_velo_y, int *boost){
+bool move_ball(int *ball_pos_x, int *ball_pos_y, int *ball_velo_x, int *ball_velo_y, int *boost, int paddleone[3], int paddletwo[3]){
 		putChar_atXY(2, *ball_pos_x, *ball_pos_y);
-                if(*ball_pos_x + *ball_velo_x >=39 || *ball_pos_x + *ball_velo_x < 0){
+                if(*ball_pos_x + *ball_velo_x == 39){
+			if(!(*ball_pos_y >= paddletwo[0] && *ball_pos_y <= paddletwo[2])){
+				return false;}
+			*ball_velo_x = -*ball_velo_x;}
+		if(*ball_pos_x + *ball_velo_x == 0){
+			if(!(*ball_pos_y >= paddleone[0] && *ball_pos_y <= paddleone[2])){
+				return false;}
                         *ball_velo_x = -*ball_velo_x;
                 }
-                if (*ball_pos_y + *ball_velo_y >= 30 || *ball_pos_y + *ball_velo_y < 0){
+                if (*ball_pos_y + *ball_velo_y >= 30 || *ball_pos_y + *ball_velo_y <= 0){
                         *ball_velo_y = -*ball_velo_y;
                 }
                 *ball_pos_x += *ball_velo_x;
                 *ball_pos_y += *ball_velo_y;
                 putChar_atXY(0, *ball_pos_x, *ball_pos_y);
 		my_pause(20/ *boost);
+		return true;
 }
 
-void mvpad_one(int *prev){
+void mvpad_one(int *prev, int array[3]){
 	int raw = get_accel();
 	short accelX = (raw >> 16);
 	 accelX = ceil(((accelX * 60) / 1024));
@@ -166,12 +173,15 @@ void mvpad_one(int *prev){
 	if(*prev!= -1 || *prev-1 > 0){putChar_atXY(2, 0, *prev-1);}
 	if(*prev!= -1 || *prev+1 < 29){putChar_atXY(2, 0, *prev+1);}
     	putChar_atXY(1, 0, accelX);
-	if(accelX>0){putChar_atXY(1, 0, accelX-1);}
-	if(accelX<29){putChar_atXY(1, 0, accelX+1);}
+	array[1] = accelX;
+	if(accelX>0){putChar_atXY(1, 0, accelX-1);
+	array[0] = accelX-1;}
+	if(accelX<29){putChar_atXY(1, 0, accelX+1);
+	array[2] = accelX+1;}
 
 	*prev = accelX;
 }
-void mvpad_two(int *prev){
+void mvpad_two(int *prev, int array[3]){
 	int raw = get_accel();
 	short accelY = (short)(raw & 0xFFFF);
 	accelY = ceil(((accelY * 60) / 1024));
@@ -179,8 +189,11 @@ void mvpad_two(int *prev){
 	if(*prev != -1 || *prev-1 > 0){putChar_atXY(2, 39, *prev-1);}
 	if(*prev != -1 || *prev+1 < 29){putChar_atXY(2, 39, *prev+1);}
    	putChar_atXY(1, 39, accelY);
-	if(accelY > 0){putChar_atXY(1, 39, accelY-1);}
-	if(accelY < 29){putChar_atXY(1, 39, accelY+1);}
+	array[1] = accelY;
+	if(accelY > 0){putChar_atXY(1, 39, accelY-1);
+	array[0] = accelY-1;}
+	if(accelY < 29){putChar_atXY(1, 39, accelY+1);
+	array[2] = accelY+1;}
 	*prev = accelY;
 	
 }
@@ -195,10 +208,12 @@ int main() {
 	bool in_play = true;
 	int prev_x = -1;
 	int prev_y = -1;
+	int paddleone[3] = {-1, -1, -1};
+	int paddletwo[3] = {-1, -1, -1};
         while(in_play){
-                move_ball(&ball_x, &ball_y, &velo_x, &velo_y, &booster);
- 		mvpad_one(&prev_x);
- 		mvpad_two(&prev_y);		
+                in_play = move_ball(&ball_x, &ball_y, &velo_x, &velo_y, &booster, paddleone, paddletwo);
+ 		mvpad_one(&prev_x, paddleone);
+ 		mvpad_two(&prev_y, paddletwo);		
 	
         }
 }
